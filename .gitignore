@@ -5,3 +5,4 @@
 /profilebeat
 /profilebeat.test
 *.pyc
+go.sum

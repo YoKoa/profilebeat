@@ -4,9 +4,10 @@ package main
 
 import (
 	"flag"
+	"github.com/YoKoa/profilebeat/cmd"
+
 	"testing"
 
-	"github.com/YoKoa/profilebeat/cmd"
 )
 
 var systemTest *bool

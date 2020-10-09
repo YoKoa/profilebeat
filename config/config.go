@@ -3,12 +3,18 @@
 
 package config
 
-import "time"
+import (
+	"time"
+)
 
 type Config struct {
 	Period time.Duration `config:"period"`
+	Name string `config:"name"`
+	Addrs string `config:"addrs"`
 }
 
 var DefaultConfig = Config{
-	Period: 1 * time.Second,
+	Period:   1 * time.Second,
+	Name  :   "profilebeat",
+	Addrs :   "localhost:27017",
 }
