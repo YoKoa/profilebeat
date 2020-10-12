@@ -193,8 +193,6 @@ github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1
 github.com/eapache/queue v1.1.0 h1:YOEu7KNc61ntiQlcEeUIoDTJ2o8mQznoNvUhiigpIqc=
 github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFPTqq+I=
 github.com/eclipse/paho.mqtt.golang v1.2.1-0.20200121105743-0d940dd29fd2/go.mod h1:H9keYFcgq3Qr5OUJm/JZI/i6U7joQ8SYLhZwfeOo6Ts=
-github.com/elastic/beats v7.6.2+incompatible h1:jHdLv83KURaqWUC6f55iMyVP6LYZrgElfeqxKWcskVE=
-github.com/elastic/beats v7.6.2+incompatible/go.mod h1:7cX7zGsOwJ01FLkZs9Tg5nBdnQi6XB3hYAyWekpKgeY=
 github.com/elastic/beats/v7 v7.9.2 h1:CDuAouysjFj1OifVxlY6Lc5B5G/tZ0FF6asMxDOX1BA=
 github.com/elastic/beats/v7 v7.9.2/go.mod h1:drhCN8qJL1qr5gPC3djI1ap/dAeGxuuSm4KiWPI8xIk=
 github.com/elastic/dhcp v0.0.0-20200227161230-57ec251c7eb3/go.mod h1:aPqzac6AYkipvp4hufTyMj5PDIphF3+At8zr7r51xjY=

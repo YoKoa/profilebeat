@@ -1,15 +1,13 @@
 package beater
 
 import (
-	"context"
 	"fmt"
 	"github.com/YoKoa/profilebeat/mongo"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"time"
-	m "go.mongodb.org/mongo-driver/mongo"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/logp"
+	m "go.mongodb.org/mongo-driver/mongo"
+	"time"
 
 	"github.com/YoKoa/profilebeat/config"
 )
@@ -21,6 +19,9 @@ type profilebeat struct {
 	client beat.Client
 	conn   *m.Client
 	dbs    []string
+
+	tailer  *Tailer
+	checker *DBNameChecker
 	//TODO tailer
 }
 
@@ -34,12 +35,15 @@ func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error connection mongodb: %v", err)
 	}
-
 	bt := &profilebeat{
 		done:   make(chan struct{}),
 		config: c,
-		conn: conn,
+		conn:   conn,
 	}
+	checker := NewDBNameChecker(bt)
+	tailer := NewTailer(checker.event)
+	bt.checker = checker
+	bt.tailer = tailer
 	return bt, nil
 }
 
@@ -51,16 +55,18 @@ func (bt *profilebeat) Run(b *beat.Beat) error {
 	if err != nil {
 		return err
 	}
-	ticker := time.NewTicker(bt.config.Period)
-	go bt.GetDBsList(ticker)
-	go bt.mongoSlow(ticker)
+	//ticker := time.NewTicker(bt.config.Period)
+	//go bt.GetDBsList(ticker)
+	//go bt.mongoSlow(ticker)
+
+	go bt.tailer.Run()
+	go bt.checker.Run()
 	for {
 		select {
 		case <-bt.done:
 			return nil
 		}
 	}
-
 
 	//TODO 方式1: 使用游标tail数据
 	//profileEvent := make(chan common.MapStr, 10000)
@@ -112,8 +118,6 @@ func (bt *profilebeat) Run(b *beat.Beat) error {
 
 }
 
-
-
 // Stop stops profilebeat.
 func (bt *profilebeat) Stop() {
 	bt.client.Close()
@@ -121,23 +125,4 @@ func (bt *profilebeat) Stop() {
 }
 
 func (bt *profilebeat) GetDBsList(ticker *time.Ticker) {
-	for {
-		select {
-
-		case <-bt.done:
-			return
-
-		case <-ticker.C:
-
-		}
-		ctx :=context.Background()
-		names, err := bt.conn.ListDatabaseNames(ctx, primitive.M{})
-		if err != nil {
-			return
-		}
-		bt.dbs=names
-	}
-
-
-
 }
