@@ -35,7 +35,6 @@ type (
 		bt        *profilebeat
 		db        string
 		isRunning bool
-		flag      bool
 		cursor    *mongo.Cursor
 		err       error
 		startTime time.Time
@@ -61,7 +60,6 @@ func NewRunner(db string, bt *profilebeat) *Runner {
 		bt:        bt,
 		db:        db,
 		isRunning: false,
-		flag:      false,
 		startTime: time.Now().UTC(),
 		shutdown:  make(chan struct{}),
 	}
@@ -71,14 +69,8 @@ func (r *Runner) Run() {
 	defer r.panic()
 	logp.Info("db[%s] runner is starting", r.db)
 	//判断当前数据库system.profile是否为空表
-	if !r.flag {
-		r.flag = r.profileIsValid(r.bt.interval)
-	}
-
-	if r.createCursor(); r.err != nil {
-		return
-	}
-
+	r.profileIsValid(r.bt.interval)
+	r.createCursor()
 	for r.cursor.Next(context.Background()) {
 		var doc v.SystemProfile
 		if err := r.cursor.Decode(&doc); err != nil {
@@ -121,6 +113,9 @@ func (r *Runner) createCursor() {
 	opts.SetCursorType(options.TailableAwait)
 	filter := bson.D{{"ts", bson.M{"$gte": r.startTime}}}
 	r.cursor, r.err = r.bt.conn.Database(r.db).Collection("system.profile").Find(context.Background(), filter, opts)
+	if r.err != nil {
+		panic(r.err)
+	}
 }
 
 func (r *Runner) panic(){
@@ -128,10 +123,11 @@ func (r *Runner) panic(){
 	r.printErr()
 	if p := recover(); p!= nil {
 		r.err = errors.New("panic")
+		logp.Err("db[%s] runner is panic, %v", p)
 	}
 }
 
-func(r *Runner) printErr(){
+func (r *Runner) printErr(){
 	if r.err != nil {
 		logp.Info("exit err is %v", r.err)
 	}
@@ -146,6 +142,7 @@ func NewDBNameChecker(bt *profilebeat) *DBNameChecker {
 		event:     make(chan Event, 1000),
 	}
 }
+
 func (checker *DBNameChecker) Run() {
 	logp.Info("checker is running! ")
 	ticker := time.NewTicker(3 * time.Second)
