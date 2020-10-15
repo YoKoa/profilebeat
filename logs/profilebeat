@@ -1,0 +1,32 @@
+2020-10-14T14:29:27.508+0800	INFO	instance/beat.go:640	Home path: [/Users/zhangxiaoguang/go/src/profilebeat] Config path: [/Users/zhangxiaoguang/go/src/profilebeat] Data path: [/Users/zhangxiaoguang/go/src/profilebeat/data] Logs path: [/Users/zhangxiaoguang/go/src/profilebeat/logs]
+2020-10-14T14:29:27.509+0800	DEBUG	[beat]	instance/beat.go:692	Beat metadata path: /Users/zhangxiaoguang/go/src/profilebeat/data/meta.json
+2020-10-14T14:29:27.510+0800	INFO	instance/beat.go:648	Beat ID: bf34c06f-c1f3-4269-bdfe-2a9f9d531648
+2020-10-14T14:29:27.510+0800	DEBUG	[seccomp]	seccomp/seccomp.go:96	Syscall filtering is only supported on Linux
+2020-10-14T14:29:27.511+0800	INFO	[beat]	instance/beat.go:976	Beat info	{"system_info": {"beat": {"path": {"config": "/Users/zhangxiaoguang/go/src/profilebeat", "data": "/Users/zhangxiaoguang/go/src/profilebeat/data", "home": "/Users/zhangxiaoguang/go/src/profilebeat", "logs": "/Users/zhangxiaoguang/go/src/profilebeat/logs"}, "type": "profilebeat", "uuid": "bf34c06f-c1f3-4269-bdfe-2a9f9d531648"}}}
+2020-10-14T14:29:27.511+0800	INFO	[beat]	instance/beat.go:985	Build info	{"system_info": {"build": {"commit": "unknown", "libbeat": "7.9.2", "time": "1754-08-30T22:43:41.128Z", "version": "7.9.2"}}}
+2020-10-14T14:29:27.511+0800	INFO	[beat]	instance/beat.go:988	Go runtime info	{"system_info": {"go": {"os":"darwin","arch":"amd64","max_procs":8,"version":"go1.14.9"}}}
+2020-10-14T14:29:27.512+0800	INFO	[beat]	instance/beat.go:992	Host info	{"system_info": {"host": {"architecture":"x86_64","boot_time":"2020-09-27T09:44:57.05022+08:00","name":"zhangxiaoguangdeMacBook-Pro.local","ip":["127.0.0.1/8","::1/128","fe80::1/64","fe80::aede:48ff:fe00:1122/64","fe80::8e3:e1b8:9fa2:47ce/64","10.131.5.55/24","fe80::c46b:58ff:fe30:25e2/64","fe80::c46b:58ff:fe30:25e2/64","fe80::aaa:3304:1d8f:e64e/64","fe80::c747:2280:e061:eb88/64","fe80::883a:d796:50a2:7627/64","fe80::cbb2:c16e:10ec:6d9/64","fe80::8fc3:dd18:66f9:7615/64","fe80::350c:a8ff:d3c1:4458/64","fe80::7634:ac35:a87f:5f95/64"],"kernel_version":"19.6.0","mac":["ac:de:48:00:11:22","b2:9c:4a:bd:87:fe","90:9c:4a:bd:87:fe","1e:66:41:f8:1d:c5","1e:66:41:f8:1d:c4","1e:66:41:f8:1d:c1","1e:66:41:f8:1d:c0","1e:66:41:f8:1d:c5","02:9c:4a:bd:87:fe","c6:6b:58:30:25:e2","c6:6b:58:30:25:e2","00:e0:4c:af:bc:6e"],"os":{"family":"darwin","platform":"darwin","name":"Mac OS X","version":"10.15.6","major":10,"minor":15,"patch":6,"build":"19G2021"},"timezone":"CST","timezone_offset_sec":28800,"id":"1B1C1F50-9045-576E-BDD3-962932563F42"}}}
+2020-10-14T14:29:27.512+0800	INFO	[beat]	instance/beat.go:1021	Process info	{"system_info": {"process": {"cwd": "/Users/zhangxiaoguang/go/src/profilebeat", "exe": "./test", "name": "test", "pid": 49348, "ppid": 48318, "start_time": "2020-10-14T14:29:27.274+0800"}}}
+2020-10-14T14:29:27.512+0800	INFO	instance/beat.go:299	Setup Beat: profilebeat; Version: 7.9.2
+2020-10-14T14:29:27.512+0800	DEBUG	[beat]	instance/beat.go:325	Initializing output plugins
+2020-10-14T14:29:27.512+0800	INFO	[index-management]	idxmgmt/std.go:184	Set output.elasticsearch.index to 'profilebeat-7.9.2' as ILM is enabled.
+2020-10-14T14:29:27.514+0800	INFO	eslegclient/connection.go:99	elasticsearch url: http://localhost:9200
+2020-10-14T14:29:27.515+0800	DEBUG	[publisher]	pipeline/consumer.go:148	start pipeline event consumer
+2020-10-14T14:29:27.516+0800	INFO	[publisher]	pipeline/module.go:113	Beat name: zhangxiaoguangdeMacBook-Pro.local
+2020-10-14T14:29:27.519+0800	INFO	[monitoring]	log/log.go:118	Starting metrics logging every 30s
+2020-10-14T14:29:27.519+0800	INFO	instance/beat.go:450	profilebeat start running.
+2020-10-14T14:29:27.519+0800	INFO	beater/profilebeat.go:48	profilebeat is running! Hit CTRL-C to stop it.
+2020-10-14T14:29:31.430+0800	DEBUG	[service]	service/service.go:54	Received sigterm/sigint, stopping
+2020-10-14T14:29:31.431+0800	DEBUG	[publisher]	pipeline/client.go:157	client: closing acker
+2020-10-14T14:29:31.431+0800	DEBUG	[publisher]	pipeline/client.go:162	client: done closing acker
+2020-10-14T14:29:31.431+0800	DEBUG	[publisher]	pipeline/client.go:164	client: unlink from queue
+2020-10-14T14:29:31.431+0800	DEBUG	[publisher]	pipeline/client.go:177	client: cancelled 0 events
+2020-10-14T14:29:31.431+0800	DEBUG	[publisher]	pipeline/client.go:166	client: done unlink
+2020-10-14T14:29:31.432+0800	DEBUG	[processes]	process/process.go:480	Process name does not matches the provided regex; pid=49348; name=test: <nil>
+2020-10-14T14:29:31.432+0800	ERROR	instance/metrics.go:92	Error while getting memory usage: error retrieving process stats: cannot find matching process for pid=49348
+2020-10-14T14:29:31.433+0800	DEBUG	[processes]	process/process.go:480	Process name does not matches the provided regex; pid=49348; name=test: <nil>
+2020-10-14T14:29:31.433+0800	ERROR	instance/metrics.go:136	Error retrieving CPU percentages: error retrieving process stats: cannot find matching process for pid=49348
+2020-10-14T14:29:31.433+0800	INFO	[monitoring]	log/log.go:153	Total non-zero metrics	{"monitoring": {"metrics": {"beat":{"info":{"ephemeral_id":"2775ffd0-28f9-41ec-97ac-de274c13b714","uptime":{"ms":3998}},"memstats":{"gc_next":6297264,"memory_alloc":3990664,"memory_total":9260088},"runtime":{"goroutines":9}},"libbeat":{"config":{"module":{"running":0}},"output":{"type":"elasticsearch"},"pipeline":{"clients":0,"events":{"active":0}}},"system":{"cpu":{"cores":8},"load":{"1":2.8203,"15":2.9385,"5":3.3037,"norm":{"1":0.3525,"15":0.3673,"5":0.413}}}}}}
+2020-10-14T14:29:31.434+0800	INFO	[monitoring]	log/log.go:154	Uptime: 3.999314474s
+2020-10-14T14:29:31.434+0800	INFO	[monitoring]	log/log.go:131	Stopping metrics logging.
+2020-10-14T14:29:31.435+0800	INFO	instance/beat.go:456	profilebeat stopped.

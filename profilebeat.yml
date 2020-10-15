@@ -1,6 +1,6 @@
-#output:
-#  console:
-#    pretty: true
+output:
+  console:
+    pretty: true
 ################### Mongobeat Configuration Example #########################
 
 ############################# Mongobeat ######################################
@@ -8,9 +8,11 @@
 profilebeat:
   # Defines how often an event is sent to the output
   period: 1s
-  name: "profilebeat default local target 1"
-  addrs: "mongodb://test:1qaz#WSXzxc@10.240.103.3:27017"
-  ip: ""
+  name: "profileBeat for mongodb.v4.0"
+  addrs: "mongodb://cds_root:S18AlaQuZsuGVLzyAnNe@10.240.103.3:27017,10.240.103.2:27017/?replicaSet=Rpl-CRLPtY&readPreference=secondary"
+  instance: "10.240.103.3"
+  clusterid: "951762be-867a-4bd7-a3a8-e83606d8f42c"
+  interval: 3s
 
 #================================ General =====================================
 
@@ -33,9 +35,9 @@ profilebeat:
 # Multiple outputs may be used.
 
 #-------------------------- Elasticsearch output ------------------------------
-output.elasticsearch:
+#output.elasticsearch:
   # Array of hosts to connect to.
-  hosts: ["localhost:9200"]
+#  hosts: ["localhost:9200"]
 
   # Optional protocol and basic auth credentials.
   #protocol: "https"

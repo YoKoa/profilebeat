@@ -8,13 +8,19 @@ import (
 )
 
 type Config struct {
-	Period time.Duration `config:"period"`
-	Name string `config:"name"`
-	Addrs string `config:"addrs"`
+	Period    time.Duration `config:"period"`
+	Name      string        `config:"name"`
+	Addrs     string        `config:"addrs"`
+	ClusterId string        `config:"clusterid"`
+	Instance  string        `config:"instance"`
+	Interval  time.Duration `config:"interval"`
 }
 
 var DefaultConfig = Config{
-	Period:   1 * time.Second,
-	Name  :   "profilebeat",
-	Addrs :   "localhost:27017",
+	Period:    1 * time.Second,
+	Name:      "profileBeat",
+	Addrs:     "localhost:27017",
+	ClusterId: "",
+	Instance:  "",
+	Interval:  3 * time.Second,
 }

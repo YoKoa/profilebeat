@@ -14,7 +14,7 @@ import (
 
 // NewConnection
 func NewConnection(urls string) (*mongo.Client, error) {
-	client, err := mongo.NewClient(options.Client().ApplyURI(urls))
+	client, err := mongo.NewClient(options.Client().ApplyURI(urls).SetMaxPoolSize(2))
 	if err != nil {
 		return nil,err
 	}

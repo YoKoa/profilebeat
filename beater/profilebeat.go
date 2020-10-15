@@ -2,23 +2,25 @@ package beater
 
 import (
 	"fmt"
+	"github.com/YoKoa/profilebeat/config"
 	"github.com/YoKoa/profilebeat/mongo"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/logp"
 	m "go.mongodb.org/mongo-driver/mongo"
 	"time"
-
-	"github.com/YoKoa/profilebeat/config"
 )
 
 // profilebeat configuration.
 type profilebeat struct {
-	done   chan struct{}
-	config config.Config
-	client beat.Client
-	conn   *m.Client
-	dbs    []string
+	done      chan struct{}
+	config    config.Config
+	client    beat.Client
+	conn      *m.Client
+	clusterId string
+	instance  string
+	dbs       []string
+	interval  time.Duration
 
 	tailer  *Tailer
 	checker *DBNameChecker
@@ -36,12 +38,16 @@ func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
 		return nil, fmt.Errorf("Error connection mongodb: %v", err)
 	}
 	bt := &profilebeat{
-		done:   make(chan struct{}),
-		config: c,
-		conn:   conn,
+		done:      make(chan struct{}),
+		config:    c,
+		conn:      conn,
+		clusterId: c.ClusterId,
+		instance:  c.Instance,
+		interval: c.Interval,
+
 	}
 	checker := NewDBNameChecker(bt)
-	tailer := NewTailer(checker.event)
+	tailer := NewTailer(checker.event, bt)
 	bt.checker = checker
 	bt.tailer = tailer
 	return bt, nil
@@ -53,76 +59,27 @@ func (bt *profilebeat) Run(b *beat.Beat) error {
 	var err error
 	bt.client, err = b.Publisher.Connect()
 	if err != nil {
+		logp.Err("Failed to retrieve server status")
 		return err
 	}
-	//ticker := time.NewTicker(bt.config.Period)
-	//go bt.GetDBsList(ticker)
-	//go bt.mongoSlow(ticker)
 
 	go bt.tailer.Run()
+	logp.Info("tailer is running! ")
 	go bt.checker.Run()
+	logp.Info("checker is running! ")
+	//
+    go bt.CheckPing()
+	logp.Info("CheckPing is running! ")
 	for {
 		select {
 		case <-bt.done:
 			return nil
 		}
 	}
-
-	//TODO 方式1: 使用游标tail数据
-	//profileEvent := make(chan common.MapStr, 10000)
-	//go func(events chan common.MapStr) {
-	//	//todo Start tailer with configration
-	//	//todo code(bt.tailer.run(events))
-	//}(profileEvent)
-	//
-	//var pevent common.MapStr
-	//
-	//for {
-	//	select {
-	//	case <-bt.done:
-	//		return nil
-	//	case pevent = <-profileEvent:
-	//
-	//		event := beat.Event{
-	//			Timestamp: time.Now(),
-	//			Fields: common.MapStr{
-	//				"value":   pevent["value"],
-	//			},
-	//		}
-	//		bt.client.Publish(event)
-	//	}
-	//}
-	//
-	//
-	////TODO 方式2: 每几秒就获取一次数据
-	//ticker := time.NewTicker(bt.config.Period)
-	//counter := 1
-	//for {
-	//	select {
-	//	case <-bt.done:
-	//		return nil
-	//	case <-ticker.C:
-	//	}
-	//
-	//	event := beat.Event{
-	//		Timestamp: time.Now(),
-	//		Fields: common.MapStr{
-	//			"type":    b.Info.Name,
-	//			"counter": counter,
-	//		},
-	//	}
-	//	bt.client.Publish(event)
-	//	logp.Info("Event sent")
-	//	counter++
-	//}
-
 }
 
 // Stop stops profilebeat.
 func (bt *profilebeat) Stop() {
 	bt.client.Close()
 	close(bt.done)
-}
-
-func (bt *profilebeat) GetDBsList(ticker *time.Ticker) {
 }
