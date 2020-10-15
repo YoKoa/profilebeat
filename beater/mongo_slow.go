@@ -2,14 +2,14 @@ package beater
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	v "github.com/YoKoa/profilebeat/mongo"
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/logp"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	m "go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 )
@@ -19,7 +19,7 @@ const (
 	_create    = "CREATE"
 	_disable   = "DISABLE"
 	_enable    = "ENABLE"
-	_eventType = "mongodb_slow"
+	_eventType = "slow"
 )
 
 type (
@@ -36,6 +36,9 @@ type (
 		db        string
 		isRunning bool
 		flag      bool
+		cursor    *mongo.Cursor
+		err       error
+		startTime time.Time
 		shutdown  chan struct{}
 	}
 
@@ -59,42 +62,28 @@ func NewRunner(db string, bt *profilebeat) *Runner {
 		db:        db,
 		isRunning: false,
 		flag:      false,
+		startTime: time.Now().UTC(),
 		shutdown:  make(chan struct{}),
 	}
 }
 
 func (r *Runner) Run() {
-	defer func() {
-		if r := recover(); r != nil {
-			logp.Err("Panic error: %v", r)
-		}
-	}()
-	logp.Info("profilebeat RUN %s system.profile.....", r.db)
-	utc := time.Now().UTC()
-	logp.Info("utc time: ", utc)
-	ctx := context.Background()
+	defer r.panic()
+	logp.Info("db[%s] runner is starting", r.db)
 	//判断当前数据库system.profile是否为空表
 	if !r.flag {
-		logp.Info("ProfileCount RUN %s .....", r.db)
-		r.flag = ProfileCount(r.bt.conn, r.db, r.bt.interval)
+		r.flag = r.profileIsValid(r.bt.interval)
 	}
 
-	opts := &options.FindOptions{}
-	opts.SetCursorType(options.TailableAwait)
-	filter := bson.D{{"ts", bson.M{"$gte": utc}}}
-	logp.Info("system.profile db ..... ", r.db)
-	cursor, err := r.bt.conn.Database(r.db).Collection("system.profile").Find(ctx, filter, opts)
-	if err != nil {
-		logp.Err("Failed to retrieve server status")
+	if r.createCursor(); r.err != nil {
 		return
 	}
-	logp.Info("current %s cursor id is %d", r.db, cursor.ID())
-	for cursor.Next(ctx) {
+
+	for r.cursor.Next(context.Background()) {
 		var doc v.SystemProfile
-		logp.Info("system.profile start..... ")
-		err := cursor.Decode(&doc)
-		if err != nil {
+		if err := r.cursor.Decode(&doc); err != nil {
 			logp.Err("Failed to cursor.Decode")
+			continue
 		}
 		// instantiate event
 		event := beat.Event{
@@ -107,20 +96,15 @@ func (r *Runner) Run() {
 				"clusterId":  r.bt.clusterId,
 			},
 		}
-		logp.Info("profilebeat event: ", event)
-		// fire
 		r.bt.client.Publish(event)
 	}
-	if err := cursor.Err(); err != nil {
-		fmt.Println("cursor.Err is ", err)
-		return
-	}
-	logp.Info("mongodb_slow Event sent", r.db)
-
+	r.err = r.cursor.Err()
 }
 
 func (r *Runner) Stop() {
 	r.isRunning = false
+	r.cursor.Close(context.Background())
+	logp.Info("mongodb_slow Event sent", r.db)
 }
 
 func (r *Runner) Destroy() {
@@ -129,6 +113,27 @@ func (r *Runner) Destroy() {
 	} else {
 		r.Stop()
 		close(r.shutdown)
+	}
+}
+
+func (r *Runner) createCursor() {
+	opts := &options.FindOptions{}
+	opts.SetCursorType(options.TailableAwait)
+	filter := bson.D{{"ts", bson.M{"$gte": r.startTime}}}
+	r.cursor, r.err = r.bt.conn.Database(r.db).Collection("system.profile").Find(context.Background(), filter, opts)
+}
+
+func (r *Runner) panic(){
+	r.Stop()
+	r.printErr()
+	if p := recover(); p!= nil {
+		r.err = errors.New("panic")
+	}
+}
+
+func(r *Runner) printErr(){
+	if r.err != nil {
+		logp.Info("exit err is %v", r.err)
 	}
 }
 
@@ -142,6 +147,7 @@ func NewDBNameChecker(bt *profilebeat) *DBNameChecker {
 	}
 }
 func (checker *DBNameChecker) Run() {
+	logp.Info("checker is running! ")
 	ticker := time.NewTicker(3 * time.Second)
 	for {
 		select {
@@ -223,6 +229,7 @@ func NewTailer(event chan Event, bt *profilebeat) *Tailer {
 }
 
 func (r *Tailer) Run() {
+	logp.Info("tailer is running! ")
 	for {
 		select {
 		case event, ok := <-r.event:
@@ -260,10 +267,11 @@ func (r *Tailer) Stop() {
 }
 
 //轮训判断当前数据库system.profile是否为空
-func ProfileCount(client *m.Client, dbName string, interval time.Duration) (flag bool) {
+func (r *Runner) profileIsValid(interval time.Duration) (flag bool) {
+	logp.Info("ProfileCount RUN %s .....", r.db)
 	ctx := context.Background()
-	count, err := client.Database(dbName).Collection("system.profile").CountDocuments(ctx, primitive.M{})
-	logp.Info("profile %s doc count is %d", dbName, count)
+	count, err := r.bt.conn.Database(r.db).Collection("system.profile").CountDocuments(ctx, primitive.M{})
+	logp.Info("profile %s doc count is %d", r.db, count)
 	if err != nil {
 		logp.Err("Failed to system.profile count err")
 		return false
@@ -271,16 +279,16 @@ func ProfileCount(client *m.Client, dbName string, interval time.Duration) (flag
 	for {
 		if count == 0 {
 			time.Sleep(interval)
-			num, err := client.Database(dbName).Collection("system.profile").CountDocuments(ctx, primitive.M{})
+			num, err := r.bt.conn.Database(r.db).Collection("system.profile").CountDocuments(ctx, primitive.M{})
 			if err != nil {
 				logp.Err("Failed to system.profile count err")
 				return
 			}
 			count = num
 			flag = false
-			logp.Info("system.profile %s doc num is %d: ", dbName, count)
+			logp.Info("system.profile %s doc num is %d: ", r.db, count)
 		} else {
-			logp.Info("system.profile %s : ", dbName)
+			logp.Info("system.profile %s : ", r.db)
 			flag = true
 			break
 		}
@@ -306,6 +314,7 @@ func Subtract(slice1, slice2 []string) []string {
 }
 
 func (bt *profilebeat) CheckPing() {
+	logp.Info("CheckPing is running! ")
 	ticker := time.NewTicker(3 * time.Second)
 	for {
 		select {

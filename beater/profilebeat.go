@@ -64,12 +64,9 @@ func (bt *profilebeat) Run(b *beat.Beat) error {
 	}
 
 	go bt.tailer.Run()
-	logp.Info("tailer is running! ")
 	go bt.checker.Run()
-	logp.Info("checker is running! ")
-	//
     go bt.CheckPing()
-	logp.Info("CheckPing is running! ")
+
 	for {
 		select {
 		case <-bt.done:
