@@ -69,8 +69,12 @@ func (r *Runner) Run() {
 	defer r.panic()
 	logp.Info("db[%s] runner is starting", r.db)
 	//判断当前数据库system.profile是否为空表
-	r.profileIsValid(r.bt.interval)
+	r.profileIsValid()
 	r.createCursor()
+	r.runc()
+}
+
+func (r *Runner) runc() {
 	for r.cursor.Next(context.Background()) {
 		var doc v.SystemProfile
 		if err := r.cursor.Decode(&doc); err != nil {
@@ -95,7 +99,9 @@ func (r *Runner) Run() {
 
 func (r *Runner) Stop() {
 	r.isRunning = false
-	r.cursor.Close(context.Background())
+	if r.cursor != nil {
+		r.cursor.Close(context.Background())
+	}
 	logp.Info("mongodb_slow Event sent", r.db)
 }
 
@@ -118,16 +124,16 @@ func (r *Runner) createCursor() {
 	}
 }
 
-func (r *Runner) panic(){
+func (r *Runner) panic() {
 	r.Stop()
 	r.printErr()
-	if p := recover(); p!= nil {
+	if p := recover(); p != nil {
 		r.err = errors.New("panic")
 		logp.Err("db[%s] runner is panic, %v", p)
 	}
 }
 
-func (r *Runner) printErr(){
+func (r *Runner) printErr() {
 	if r.err != nil {
 		logp.Info("exit err is %v", r.err)
 	}
@@ -264,33 +270,30 @@ func (r *Tailer) Stop() {
 }
 
 //轮训判断当前数据库system.profile是否为空
-func (r *Runner) profileIsValid(interval time.Duration) (flag bool) {
+func (r *Runner) profileIsValid() (flag bool) {
 	logp.Info("ProfileCount RUN %s .....", r.db)
-	ctx := context.Background()
-	count, err := r.bt.conn.Database(r.db).Collection("system.profile").CountDocuments(ctx, primitive.M{})
-	logp.Info("profile %s doc count is %d", r.db, count)
-	if err != nil {
-		logp.Err("Failed to system.profile count err")
+	if r.haveData() {
+		return true
+	}
+
+	ticker := time.NewTicker(120 * time.Second)
+	select {
+	case <-ticker.C:
+		if r.haveData() {
+			return true
+		}
+	case <-r.shutdown:
 		return false
 	}
-	for {
-		if count == 0 {
-			time.Sleep(interval)
-			num, err := r.bt.conn.Database(r.db).Collection("system.profile").CountDocuments(ctx, primitive.M{})
-			if err != nil {
-				logp.Err("Failed to system.profile count err")
-				return
-			}
-			count = num
-			flag = false
-			logp.Info("system.profile %s doc num is %d: ", r.db, count)
-		} else {
-			logp.Info("system.profile %s : ", r.db)
-			flag = true
-			break
-		}
+	return false
+}
+
+func (r *Runner) haveData() bool {
+	count, err := r.bt.conn.Database(r.db).Collection("system.profile").CountDocuments(context.Background(), primitive.M{})
+	if err != nil || count == 0 {
+		return false
 	}
-	return flag
+	return true
 }
 
 //获取当前mongodb数据库
