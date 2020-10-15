@@ -9,7 +9,7 @@ import (
 
 // NewConnection
 func NewConnection(urls string) (*mongo.Client, error) {
-	client, err := mongo.NewClient(options.Client().ApplyURI(urls).SetMaxPoolSize(2))
+	client, err := mongo.NewClient(options.Client().ApplyURI(urls).SetMaxPoolSize(3))
 	if err != nil {
 		return nil,err
 	}

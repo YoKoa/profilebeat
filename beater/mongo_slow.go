@@ -150,9 +150,8 @@ func (checker *DBNameChecker) Run() {
 			checker.isRunning = false
 			break
 		}
-		ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-		names, err := checker.bt.conn.ListDatabaseNames(ctx, primitive.M{})
-		logp.Info("ListDatabaseNames is ", names)
+		names, err := checker.bt.conn.ListDatabaseNames(context.Background(), primitive.M{})
+		logp.Info("ListDatabaseNames is %+v", names)
 		if err != nil {
 			return
 		}
@@ -161,23 +160,23 @@ func (checker *DBNameChecker) Run() {
 		if len(checker.currentDB) > 0 {
 			//
 			rmDB := Subtract(names, checker.currentDB)
-			logp.Info("rmDB is ", rmDB)
+			logp.Info("rmDB is %+v", rmDB)
 			for _, s := range rmDB {
 				dbName := Event{
 					Action: _delete,
 					DB:     s,
 				}
-				logp.Info("checker.event rm ", s)
+				logp.Info("checker.event rm %s", s)
 				checker.event <- dbName
 			}
 			newDB := Subtract(checker.currentDB, names)
-			logp.Info("newDB is ", newDB)
+			logp.Info("newDB is %+v", newDB)
 			for _, s := range newDB {
 				dbName := Event{
 					Action: _create,
 					DB:     s,
 				}
-				logp.Info("checker.event add ", s)
+				logp.Info("checker.event add %s", s)
 				checker.event <- dbName
 			}
 
@@ -188,13 +187,13 @@ func (checker *DBNameChecker) Run() {
 					Action: _create,
 					DB:     s,
 				}
-				logp.Info("checker.event add ", s)
+				logp.Info("checker.event add %s", s)
 				checker.event <- dbName
 			}
 
 		}
 		checker.currentDB = names
-		logp.Info("currentDB : ", checker.currentDB)
+		logp.Info("currentDB : %+v", checker.currentDB)
 	}
 }
 
@@ -321,22 +320,22 @@ func (bt *profilebeat) CheckPing() {
 		var flag bool
 		if err := bt.conn.Ping(context.Background(), nil); err != nil {
 			logp.Err("Ping error: %v", err)
-			flag = false
+			flag = true
 		}
-		if !flag {
+		if flag {
 			for {
-				if !flag {
+				if flag {
 					if err := bt.conn.Ping(context.Background(), nil); err != nil {
 						logp.Err("Ping error: %v", err)
-						flag = false
-					} else {
 						flag = true
+					} else {
+						flag = false
 						break
 					}
 				}
 			}
 
-			if flag {
+			if !flag {
 				checker := NewDBNameChecker(bt)
 				tailer := NewTailer(checker.event, bt)
 				bt.checker = checker
