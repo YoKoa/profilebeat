@@ -13,14 +13,16 @@ import (
 
 // profilebeat configuration.
 type profilebeat struct {
-	done      chan struct{}
-	config    config.Config
-	client    beat.Client
-	conn      *m.Client
-	clusterId string
-	instance  string
-	dbs       []string
-	interval  time.Duration
+	done          chan struct{}
+	config        config.Config
+	client        beat.Client
+	conn          *m.Client
+	clusterId     string
+	instance      string
+	dbs           []string
+	interval      time.Duration
+	period        time.Duration
+	checkInterval time.Duration
 
 	tailer  *Tailer
 	checker *DBNameChecker
@@ -38,13 +40,14 @@ func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
 		return nil, fmt.Errorf("Error connection mongodb: %v", err)
 	}
 	bt := &profilebeat{
-		done:      make(chan struct{}),
-		config:    c,
-		conn:      conn,
-		clusterId: c.ClusterId,
-		instance:  c.Instance,
-		interval: c.Interval,
-
+		done:          make(chan struct{}),
+		config:        c,
+		conn:          conn,
+		clusterId:     c.ClusterId,
+		instance:      c.Instance,
+		interval:      c.Interval,
+		period:        c.Period,
+		checkInterval: c.CheckInterval,
 	}
 	checker := NewDBNameChecker(bt)
 	tailer := NewTailer(checker.event, bt)
@@ -63,9 +66,9 @@ func (bt *profilebeat) Run(b *beat.Beat) error {
 		return err
 	}
 
-	go bt.tailer.Run()
 	go bt.checker.Run()
-    go bt.CheckPing()
+	go bt.tailer.Run()
+	go bt.CheckPing()
 
 	for {
 		select {

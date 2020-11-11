@@ -1,7 +1,9 @@
 package beater
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	v "github.com/YoKoa/profilebeat/mongo"
 	"github.com/elastic/beats/v7/libbeat/beat"
@@ -67,7 +69,7 @@ func NewRunner(db string, bt *profilebeat) *Runner {
 
 func (r *Runner) Run() {
 	defer r.panic()
-	logp.Info("db[%s] runner is starting", r.db)
+	//logp.Info("db[%s] runner is starting", r.db)
 	//判断当前数据库system.profile是否为空表
 	r.profileIsValid()
 	r.createCursor()
@@ -81,15 +83,22 @@ func (r *Runner) runc() {
 			logp.Err("Failed to cursor.Decode")
 			continue
 		}
+		//去掉默认转义符
+		var b2 bytes.Buffer
+		enc := json.NewEncoder(&b2)
+		enc.SetEscapeHTML(false)
+		enc.Encode(doc)
 		// instantiate event
 		event := beat.Event{
 			Timestamp: time.Now(),
 			Fields: common.MapStr{
-				"@timestamp": common.Time(time.Now()),
-				"type":       _eventType,
-				"doc":        doc,
-				"instance":   r.bt.instance,
-				"clusterId":  r.bt.clusterId,
+				//"@timestamp": common.Time(time.Now()),
+				"type":          _eventType,
+				"doc":           b2.String(),
+				"instance":      r.bt.instance,
+				"clusterId":     r.bt.clusterId,
+				"millis":        doc.Millis,
+				"operationTime": doc.Ts,
 			},
 		}
 		r.bt.client.Publish(event)
@@ -115,11 +124,13 @@ func (r *Runner) Destroy() {
 }
 
 func (r *Runner) createCursor() {
+	//logp.Info("create cursor " + r.db)
 	opts := &options.FindOptions{}
 	opts.SetCursorType(options.TailableAwait)
 	filter := bson.D{{"ts", bson.M{"$gte": r.startTime}}}
 	r.cursor, r.err = r.bt.conn.Database(r.db).Collection("system.profile").Find(context.Background(), filter, opts)
 	if r.err != nil {
+		logp.Err("db[%s] runner is panic, %v", r.db,r.err)
 		panic(r.err)
 	}
 }
@@ -150,8 +161,8 @@ func NewDBNameChecker(bt *profilebeat) *DBNameChecker {
 }
 
 func (checker *DBNameChecker) Run() {
-	logp.Info("checker is running! ")
-	ticker := time.NewTicker(3 * time.Second)
+	//logp.Info("checker is running! ")
+	ticker := time.NewTicker(checker.bt.period)
 	for {
 		select {
 		case <-ticker.C:
@@ -160,7 +171,7 @@ func (checker *DBNameChecker) Run() {
 			break
 		}
 		names, err := checker.bt.conn.ListDatabaseNames(context.Background(), primitive.M{})
-		logp.Info("ListDatabaseNames is %+v", names)
+		//logp.Info("ListDatabaseNames is %+v", names)
 		if err != nil {
 			return
 		}
@@ -169,40 +180,40 @@ func (checker *DBNameChecker) Run() {
 		if len(checker.currentDB) > 0 {
 			//
 			rmDB := Subtract(names, checker.currentDB)
-			logp.Info("rmDB is %+v", rmDB)
+			//logp.Info("rmDB is %+v", rmDB)
 			for _, s := range rmDB {
 				dbName := Event{
 					Action: _delete,
 					DB:     s,
 				}
-				logp.Info("checker.event rm %s", s)
+				//logp.Info("checker.event rm %s", s)
 				checker.event <- dbName
 			}
 			newDB := Subtract(checker.currentDB, names)
-			logp.Info("newDB is %+v", newDB)
+			//logp.Info("newDB is %+v", newDB)
 			for _, s := range newDB {
 				dbName := Event{
 					Action: _create,
 					DB:     s,
 				}
-				logp.Info("checker.event add %s", s)
+				//logp.Info("checker.event add %s", s)
 				checker.event <- dbName
 			}
 
 		} else {
-			logp.Info("first is ", names)
+			//logp.Info("first is ", names)
 			for _, s := range names {
 				dbName := Event{
 					Action: _create,
 					DB:     s,
 				}
-				logp.Info("checker.event add %s", s)
+				//logp.Info("checker.event add %s", s)
 				checker.event <- dbName
 			}
 
 		}
 		checker.currentDB = names
-		logp.Info("currentDB : %+v", checker.currentDB)
+		//logp.Info("currentDB : %+v", checker.currentDB)
 	}
 }
 
@@ -232,7 +243,7 @@ func NewTailer(event chan Event, bt *profilebeat) *Tailer {
 }
 
 func (r *Tailer) Run() {
-	logp.Info("tailer is running! ")
+	//logp.Info("tailer is running! ")
 	for {
 		select {
 		case event, ok := <-r.event:
@@ -271,26 +282,32 @@ func (r *Tailer) Stop() {
 
 //轮训判断当前数据库system.profile是否为空
 func (r *Runner) profileIsValid() (flag bool) {
-	logp.Info("ProfileCount RUN %s .....", r.db)
+	//logp.Info("ProfileCount RUN %s .....", r.db)
 	if r.haveData() {
+		logp.Info("have data 1 " + r.db)
 		return true
 	}
 
-	ticker := time.NewTicker(120 * time.Second)
-	select {
-	case <-ticker.C:
-		if r.haveData() {
-			return true
+	ticker := time.NewTicker(r.bt.checkInterval)
+	for {
+		select {
+		case <-ticker.C:
+			if r.haveData() {
+				logp.Info("have data 2 " + r.db)
+				return true
+			}
+		case <-r.shutdown:
+			return false
 		}
-	case <-r.shutdown:
-		return false
 	}
+
 	return false
 }
 
 func (r *Runner) haveData() bool {
 	count, err := r.bt.conn.Database(r.db).Collection("system.profile").CountDocuments(context.Background(), primitive.M{})
 	if err != nil || count == 0 {
+		logp.Info("haveData count data " + r.db)
 		return false
 	}
 	return true
@@ -314,8 +331,8 @@ func Subtract(slice1, slice2 []string) []string {
 }
 
 func (bt *profilebeat) CheckPing() {
-	logp.Info("CheckPing is running! ")
-	ticker := time.NewTicker(3 * time.Second)
+	//logp.Info("CheckPing is running! ")
+	ticker := time.NewTicker(bt.interval)
 	for {
 		select {
 
@@ -325,7 +342,7 @@ func (bt *profilebeat) CheckPing() {
 		case <-ticker.C:
 
 		}
-		logp.Info("check ping start....")
+		//logp.Info("check ping start....")
 		var flag bool
 		if err := bt.conn.Ping(context.Background(), nil); err != nil {
 			logp.Err("Ping error: %v", err)

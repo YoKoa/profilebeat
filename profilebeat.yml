@@ -1,72 +1,28 @@
-output:
-  console:
-    pretty: true
-################### Mongobeat Configuration Example #########################
-
 ############################# Mongobeat ######################################
-
 profilebeat:
-  # Defines how often an event is sent to the output
-  period: 1s
+  # check db listName interval
+  period: 3s
   name: "profileBeat for mongodb.v4.0"
-  addrs: "mongodb://cds_root:S18AlaQuZsuGVLzyAnNe@10.240.103.3:27017,10.240.103.2:27017/?replicaSet=Rpl-CRLPtY&readPreference=secondary"
+  addrs: "mongodb://cds_root:S18AlaQuZsuGVLzyAnNe@10.240.103.3:27017/?connect=direct;slaveOk=true"
   instance: "10.240.103.3"
   clusterid: "951762be-867a-4bd7-a3a8-e83606d8f42c"
+  # checkPing db is Running interval
   interval: 3s
-
-#================================ General =====================================
-
-# The name of the shipper that publishes the network data. It can be used to group
-# all the transactions sent by a single shipper in the web interface.
-#name:
-
-# The tags of the shipper are included in their own field with each
-# transaction published.
-#tags: ["service-X", "web-tier"]
-
-# Optional fields that you can specify to add additional information to the
-# output.
-#fields:
-#  env: staging
-
+  # check system.profile is null interval
+  checkinterval: 120s
 #================================ Outputs =====================================
-
-# Configure what outputs to use when sending the data collected by the beat.
-# Multiple outputs may be used.
-
 #-------------------------- Elasticsearch output ------------------------------
-#output.elasticsearch:
-  # Array of hosts to connect to.
-#  hosts: ["localhost:9200"]
-
-  # Optional protocol and basic auth credentials.
-  #protocol: "https"
-  #username: "elastic"
-  #password: "changeme"
-
-  #----------------------------- Logstash output --------------------------------
-  #output.logstash:
-  # The Logstash hosts
-  #hosts: ["localhost:5044"]
-
-  # Optional SSL. By default is off.
-  # List of root certificates for HTTPS server verifications
-  #ssl.certificate_authorities: ["/etc/pki/root/ca.pem"]
-
-  # Certificate for SSL client authentication
-  #ssl.certificate: "/etc/pki/client/cert.pem"
-
-  # Client Certificate Key
-  #ssl.key: "/etc/pki/client/cert.key"
-
-#================================ Logging =====================================
-
-# Sets log level. The default log level is info.
-# Available log levels are: critical, error, warning, info, debug
-logging.level: debug
-
-# At debug level, you can selectively enable logging only for some components.
-# To enable all selectors use ["*"]. Examples of other selectors are "beat",
-# "publish", "service".
-#logging.selectors: ["*"]
+output.elasticsearch:
+  hosts: ["202.202.0.38:9200"]
+  index: "mongoslow"
+setup.template.name: "mongo"
+setup.template.pattern: "mongo*"
+#================================ Logging ======================================
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/profilebeat
+  name: profilebeat
+  keepfiles: 7
+  permissions: 0644
 
